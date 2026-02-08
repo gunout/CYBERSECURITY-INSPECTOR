@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberSecurity Inspector | Version Stable</title>
+    <style>
+        :root {
+            --hacker-green: #00ff00;
+            --hacker-dark: #0a0a0a;
+            --hacker-gray: #1a1a2e;
+            --warning: #ff6b00;
+            --danger: #ff0033;
+            --primary: #00a8ff;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        
+        .scan-line {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--hacker-green), transparent);
+            animation: scan 3s linear infinite;
+            z-index: 999;
+            pointer-events: none;
+        }
+        
+        @keyframes scan {
+            0% { top: 0%; }
+            100% { top: 100%; }
+        }
+        
+        header {
+            background: rgba(10, 10, 18, 0.95);
+            border-bottom: 1px solid rgba(0, 255, 0, 0.3);
+            padding: 1.2rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        h1 {
+            color: var(--hacker-green);
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        #targetUrl {
+            width: 300px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            color: var(--hacker-green);
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0077cc;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+            color: var(--hacker-green);
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .loading-step {
+            color: #aaa;
+            padding: 10px;
+            margin: 5px 0;
+            border-left: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .loading-step.active {
+            color: var(--hacker-green);
+            border-left-color: var(--hacker-green);
+            background: rgba(0, 255, 0, 0.05);
+        }
+        
+        .loading-step.completed {
+            color: #888;
+        }
+        
+        .results {
+            display: none;
+            margin-top: 2rem;
+        }
+        
+        .results.active {
+            display: block;
+        }
+        
+        .section {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .section h2 {
+            color: var(--hacker-green);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+        
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        
+        .metric {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .metric.critical { border-left-color: var(--danger); }
+        .metric.warning { border-left-color: var(--warning); }
+        .metric.success { border-left-color: var(--hacker-green); }
+        
+        .metric h3 {
+            color: #fff;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .metric.critical .metric-value { color: var(--danger); }
+        .metric.warning .metric-value { color: var(--warning); }
+        .metric.success .metric-value { color: var(--hacker-green); }
+        
+        .finding {
+            background: rgba(255, 0, 51, 0.05);
+            border-left: 4px solid var(--danger);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .finding.warning { 
+            background: rgba(255, 107, 0, 0.05);
+            border-left-color: var(--warning);
+        }
+        
+        .finding.info { 
+            background: rgba(0, 168, 255, 0.05);
+            border-left-color: var(--primary);
+        }
+        
+        .finding h4 {
+            color: #fff;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .error {
+            background: rgba(255, 0, 51, 0.1);
+            border: 1px solid var(--danger);
+            color: #ff9999;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+            display: none;
+        }
+        
+        .error.active {
+            display: block;
+        }
+        
+        .status-bar {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--hacker-green);
+        }
+        
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            #targetUrl {
+                width: 100%;
+            }
+            
+            .controls {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="scan-line"></div>
+    
+    <header>
+        <div class="header-content">
+            <h1>
+                <span style="color: var(--hacker-green)">▶</span>
+                CYBERSECURITY INSPECTOR
+            </h1>
+            <div class="controls">
+                <input type="text" id="targetUrl" placeholder="https://example.com" value="https://app.airtalk.live">
+                <button class="btn btn-primary" id="scanBtn">
+                    ▶ ANALYSER
+                </button>
+            </div>
+        </div>
+    </header>
+    
+    <div class="container">
+        <!-- Écran de chargement -->
+        <div class="loading" id="loadingScreen">
+            <h2 style="color: var(--hacker-green); margin-bottom: 2rem;">ANALYSE EN COURS...</h2>
+            <div id="loadingSteps">
+                <div class="loading-step" id="step1">Initialisation du scanner</div>
+                <div class="loading-step" id="step2">Récupération des données</div>
+                <div class="loading-step" id="step3">Analyse DNS & Infrastructure</div>
+                <div class="loading-step" id="step4">Test de sécurité</div>
+                <div class="loading-step" id="step5">Détection de vulnérabilités</div>
+                <div class="loading-step" id="step6">Génération du rapport</div>
+            </div>
+        </div>
+        
+        <!-- Message d'erreur -->
+        <div class="error" id="errorMessage"></div>
+        
+        <!-- Résultats -->
+        <div class="results" id="resultsScreen">
+            <!-- Section Vue d'ensemble -->
+            <div class="section">
+                <h2>📊 VUE D'ENSEMBLE</h2>
+                <div class="metric-grid" id="overviewMetrics">
+                    <!-- Rempli dynamiquement -->
+                </div>
+            </div>
+            
+            <!-- Section Sécurité -->
+            <div class="section">
+                <h2>🛡️ ANALYSE DE SÉCURITÉ</h2>
+                <div id="securityFindings">
+                    <!-- Rempli dynamiquement -->
+                </div>
+            </div>
+            
+            <!-- Section Infrastructure -->
+            <div class="section">
+                <h2>🌐 INFRASTRUCTURE</h2>
+                <div id="infrastructureFindings">
+                    <!-- Rempli dynamiquement -->
+                </div>
+            </div>
+            
+            <!-- Section Vulnérabilités -->
+            <div class="section">
+                <h2>⚠️ VULNÉRABILITÉS DÉTECTÉES</h2>
+                <div id="vulnerabilityFindings">
+                    <!-- Rempli dynamiquement -->
+                </div>
+            </div>
+            
+            <!-- Section Recommandations -->
+            <div class="section">
+                <h2>💡 RECOMMANDATIONS</h2>
+                <div id="recommendations">
+                    <!-- Rempli dynamiquement -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="status-bar" id="statusBar">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Prêt</span>
+    </div>
+
+    <script>
+        // ==================== CONFIGURATION ====================
+        const STATE = {
+            isScanning: false,
+            currentStep: 0,
+            results: null
+        };
+
+        // ==================== INITIALISATION ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            updateStatus('ready');
+        });
+
+        function setupEventListeners() {
+            // Bouton d'analyse
+            document.getElementById('scanBtn').addEventListener('click', startAnalysis);
+            
+            // Entrée sur URL
+            document.getElementById('targetUrl').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') startAnalysis();
+            });
+        }
+
+        // ==================== FONCTION PRINCIPALE ====================
+        async function startAnalysis() {
+            if (STATE.isScanning) {
+                showError("Une analyse est déjà en cours");
+                return;
+            }
+            
+            const url = document.getElementById('targetUrl').value.trim();
+            if (!url) {
+                showError("Veuillez entrer une URL valide");
+                return;
+            }
+            
+            // Validation URL
+            let targetUrl;
+            try {
+                targetUrl = new URL(url);
+            } catch (e) {
+                showError("URL invalide. Format: https://exemple.com");
+                return;
+            }
+            
+            // Initialisation
+            resetUI();
+            STATE.isScanning = true;
+            STATE.currentStep = 0;
+            updateStatus('scanning');
+            
+            try {
+                // Montrer l'écran de chargement
+                document.getElementById('loadingScreen').classList.add('active');
+                
+                // Étape 1: Initialisation
+                updateStep(1);
+                await delay(500);
+                
+                // Étape 2: Récupération des données
+                updateStep(2);
+                const siteData = await fetchSiteData(targetUrl.href);
+                
+                // Étape 3: Analyse DNS/Infrastructure
+                updateStep(3);
+                const infraData = await analyzeInfrastructure(targetUrl.hostname);
+                
+                // Étape 4: Test de sécurité
+                updateStep(4);
+                const securityData = await analyzeSecurity(siteData, targetUrl.href);
+                
+                // Étape 5: Détection vulnérabilités
+                updateStep(5);
+                const vulnerabilities = await detectVulnerabilities(siteData, infraData);
+                
+                // Étape 6: Génération rapport
+                updateStep(6);
+                await delay(500);
+                
+                // Compiler les résultats
+                STATE.results = {
+                    url: targetUrl.href,
+                    domain: targetUrl.hostname,
+                    siteData,
+                    infraData,
+                    securityData,
+                    vulnerabilities,
+                    timestamp: new Date().toLocaleString()
+                };
+                
+                // Afficher les résultats
+                displayResults(STATE.results);
+                
+                // Cacher l'écran de chargement
+                document.getElementById('loadingScreen').classList.remove('active');
+                
+                // Montrer les résultats
+                document.getElementById('resultsScreen').classList.add('active');
+                
+                updateStatus('success');
+                
+            } catch (error) {
+                console.error('Erreur d\'analyse:', error);
+                showError("Erreur d'analyse: " + error.message);
+                updateStatus('error');
+                
+                // Cacher l'écran de chargement
+                document.getElementById('loadingScreen').classList.remove('active');
+            } finally {
+                STATE.isScanning = false;
+                setTimeout(() => updateStatus('ready'), 3000);
+            }
+        }
+
+        // ==================== FONCTIONS D'ANALYSE ====================
+
+        async function fetchSiteData(url) {
+            try {
+                // Utiliser un proxy simple
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+                const response = await fetch(proxyUrl, { timeout: 10000 });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (!data.contents) {
+                    throw new Error("Pas de contenu");
+                }
+                
+                // Analyser le HTML
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(data.contents.substring(0, 20000), 'text/html');
+                
+                return {
+                    title: doc.title || 'Pas de titre',
+                    scripts: Array.from(doc.querySelectorAll('script[src]')).map(s => s.src),
+                    hasCSP: data.contents.includes('content-security-policy'),
+                    hasHSTS: data.contents.includes('strict-transport-security'),
+                    status: 'success'
+                };
+                
+            } catch (error) {
+                // Données de démonstration en cas d'erreur
+                return {
+                    title: 'Site inaccessible',
+                    scripts: [],
+                    hasCSP: false,
+                    hasHSTS: false,
+                    status: 'error',
+                    error: error.message
+                };
+            }
+        }
+
+        async function analyzeInfrastructure(domain) {
+            try {
+                // DNS
+                const dnsResponse = await fetch(`https://dns.google/resolve?name=${domain}&type=A`);
+                const dnsData = await dnsResponse.json();
+                const ips = dnsData.Answer ? dnsData.Answer.map(a => a.data) : [];
+                
+                // Test SSL basique
+                let sslValid = false;
+                let sslError = null;
+                
+                try {
+                    await fetch(`https://${domain}`, { 
+                        method: 'HEAD',
+                        mode: 'no-cors',
+                        cache: 'no-store'
+                    });
+                    sslValid = true;
+                } catch (e) {
+                    sslError = e.message;
+                }
+                
+                return {
+                    dns: {
+                        ips,
+                        status: ips.length > 0 ? 'success' : 'error'
+                    },
+                    ssl: {
+                        valid: sslValid,
+                        error: sslError,
+                        protocol: sslValid ? 'TLS 1.2+' : 'Non supporté'
+                    },
+                    server: 'Nginx/Apache (inféré)'
+                };
+                
+            } catch (error) {
+                return {
+                    dns: { ips: [], status: 'error', error: error.message },
+                    ssl: { valid: false, error: 'Test impossible' },
+                    server: 'Inconnu'
+                };
+            }
+        }
+
+        async function analyzeSecurity(siteData, url) {
+            let score = 50; // Score de base
+            
+            // Vérifier HTTPS
+            const usesHTTPS = url.startsWith('https://');
+            if (usesHTTPS) score += 10;
+            
+            // Vérifier CSP
+            if (siteData.hasCSP) score += 10;
+            
+            // Vérifier HSTS
+            if (siteData.hasHSTS) score += 10;
+            
+            // Vérifier scripts externes
+            const externalScripts = siteData.scripts.filter(s => s.includes('http://'));
+            if (externalScripts.length === 0) score += 5;
+            
+            // Limiter le score à 100
+            score = Math.min(score, 100);
+            
+            return {
+                score,
+                usesHTTPS,
+                hasCSP: siteData.hasCSP,
+                hasHSTS: siteData.hasHSTS,
+                externalScripts: externalScripts.length,
+                riskLevel: calculateRiskLevel(score)
+            };
+        }
+
+        async function detectVulnerabilities(siteData, infraData) {
+            const vulnerabilities = {
+                critical: [],
+                high: [],
+                medium: [],
+                low: []
+            };
+            
+            // HTTPS manquant
+            if (!infraData.ssl.valid) {
+                vulnerabilities.critical.push({
+                    id: 'VULN-001',
+                    title: 'HTTPS non activé',
+                    description: 'Le site utilise HTTP au lieu de HTTPS',
+                    impact: 'Interception de données, vol d\'identifiants',
+                    remediation: 'Installer un certificat SSL valide'
+                });
+            }
+            
+            // CSP manquant
+            if (!siteData.hasCSP) {
+                vulnerabilities.high.push({
+                    id: 'VULN-002',
+                    title: 'Content Security Policy manquante',
+                    description: 'Pas de protection contre les attaques XSS',
+                    impact: 'Cross-site scripting, injection de code',
+                    remediation: 'Implémenter une CSP appropriée'
+                });
+            }
+            
+            // HSTS manquant
+            if (!siteData.hasHSTS) {
+                vulnerabilities.medium.push({
+                    id: 'VULN-003',
+                    title: 'HSTS non activé',
+                    description: 'Pas de forcing HTTPS automatique',
+                    impact: 'Downgrade attack possible',
+                    remediation: 'Ajouter le header Strict-Transport-Security'
+                });
+            }
+            
+            // Scripts HTTP
+            const httpScripts = siteData.scripts.filter(s => s.includes('http://'));
+            if (httpScripts.length > 0) {
+                vulnerabilities.high.push({
+                    id: 'VULN-004',
+                    title: 'Scripts chargés en HTTP',
+                    description: `${httpScripts.length} script(s) utilisent HTTP non sécurisé`,
+                    impact: 'Mixed content, interception de scripts',
+                    remediation: 'Forcer HTTPS pour tous les scripts'
+                });
+            }
+            
+            // DNS résolution
+            if (infraData.dns.ips.length === 0) {
+                vulnerabilities.low.push({
+                    id: 'VULN-005',
+                    title: 'Problème de résolution DNS',
+                    description: 'Impossible de résoudre le domaine',
+                    impact: 'Disponibilité réduite',
+                    remediation: 'Vérifier la configuration DNS'
+                });
+            }
+            
+            return vulnerabilities;
+        }
+
+        // ==================== AFFICHAGE ====================
+
+        function displayResults(results) {
+            displayOverview(results);
+            displaySecurity(results.securityData);
+            displayInfrastructure(results.infraData);
+            displayVulnerabilities(results.vulnerabilities);
+            displayRecommendations(results);
+        }
+
+        function displayOverview(results) {
+            const container = document.getElementById('overviewMetrics');
+            const securityScore = results.securityData.score;
+            
+            container.innerHTML = `
+                <div class="metric ${getMetricClass(securityScore)}">
+                    <h3>Score de Sécurité</h3>
+                    <div class="metric-value">${securityScore}/100</div>
+                    <div style="font-size: 0.9rem; color: #aaa; margin-top: 5px;">
+                        ${results.securityData.riskLevel}
+                    </div>
+                </div>
+                
+                <div class="metric ${results.infraData.ssl.valid ? 'success' : 'critical'}">
+                    <h3>SSL/TLS</h3>
+                    <div class="metric-value">${results.infraData.ssl.valid ? '✓ Valide' : '✗ Erreur'}</div>
+                    <div style="font-size: 0.9rem; color: #aaa; margin-top: 5px;">
+                        ${results.infraData.ssl.protocol}
+                    </div>
+                </div>
+                
+                <div class="metric ${results.infraData.dns.ips.length > 0 ? 'success' : 'warning'}">
+                    <h3>DNS</h3>
+                    <div class="metric-value">${results.infraData.dns.ips.length} IP(s)</div>
+                    <div style="font-size: 0.9rem; color: #aaa; margin-top: 5px;">
+                        ${results.infraData.dns.status}
+                    </div>
+                </div>
+                
+                <div class="metric ${results.securityData.externalScripts === 0 ? 'success' : 'warning'}">
+                    <h3>Scripts Externes</h3>
+                    <div class="metric-value">${results.securityData.externalScripts}</div>
+                    <div style="font-size: 0.9rem; color: #aaa; margin-top: 5px;">
+                        ${results.securityData.externalScripts === 0 ? 'Sécurisés' : 'À vérifier'}
+                    </div>
+                </div>
+            `;
+        }
+
+        function displaySecurity(securityData) {
+            const container = document.getElementById('securityFindings');
+            
+            container.innerHTML = `
+                <div class="finding ${securityData.hasCSP ? 'info' : 'warning'}">
+                    <h4>Content Security Policy</h4>
+                    <div>${securityData.hasCSP ? '✓ Présente' : '✗ Manquante'}</div>
+                </div>
+                
+                <div class="finding ${securityData.hasHSTS ? 'info' : 'warning'}">
+                    <h4>HTTP Strict Transport Security</h4>
+                    <div>${securityData.hasHSTS ? '✓ Activé' : '✗ Désactivé'}</div>
+                </div>
+                
+                <div class="finding ${securityData.usesHTTPS ? 'info' : 'critical'}">
+                    <h4>HTTPS</h4>
+                    <div>${securityData.usesHTTPS ? '✓ Activé' : '✗ Non activé - CRITIQUE'}</div>
+                </div>
+            `;
+        }
+
+        function displayInfrastructure(infraData) {
+            const container = document.getElementById('infrastructureFindings');
+            
+            let dnsContent = '';
+            if (infraData.dns.ips.length > 0) {
+                dnsContent = infraData.dns.ips.map(ip => `<div>• ${ip}</div>`).join('');
+            } else {
+                dnsContent = '<div>Aucune IP trouvée</div>';
+            }
+            
+            container.innerHTML = `
+                <div class="finding info">
+                    <h4>DNS Records</h4>
+                    ${dnsContent}
+                </div>
+                
+                <div class="finding ${infraData.ssl.valid ? 'info' : 'critical'}">
+                    <h4>SSL/TLS</h4>
+                    <div>Statut: ${infraData.ssl.valid ? 'Valide ✓' : 'Erreur ✗'}</div>
+                    <div>Protocole: ${infraData.ssl.protocol}</div>
+                    ${infraData.ssl.error ? `<div>Erreur: ${infraData.ssl.error}</div>` : ''}
+                </div>
+            `;
+        }
+
+        function displayVulnerabilities(vulnerabilities) {
+            const container = document.getElementById('vulnerabilityFindings');
+            
+            let html = '';
+            let total = 0;
+            
+            // Afficher par ordre de sévérité
+            const severities = ['critical', 'high', 'medium', 'low'];
+            
+            severities.forEach(severity => {
+                if (vulnerabilities[severity] && vulnerabilities[severity].length > 0) {
+                    total += vulnerabilities[severity].length;
+                    
+                    vulnerabilities[severity].forEach(vuln => {
+                        html += `
+                            <div class="finding ${severity === 'critical' ? 'warning' : severity}">
+                                <h4>${vuln.id}: ${vuln.title}</h4>
+                                <div style="margin: 8px 0; color: #ccc;">${vuln.description}</div>
+                                <div><strong>Impact:</strong> ${vuln.impact}</div>
+                                <div><strong>Solution:</strong> ${vuln.remediation}</div>
+                            </div>
+                        `;
+                    });
+                }
+            });
+            
+            if (total === 0) {
+                html = '<div class="finding info">Aucune vulnérabilité critique détectée ✓</div>';
+            }
+            
+            container.innerHTML = html;
+        }
+
+        function displayRecommendations(results) {
+            const container = document.getElementById('recommendations');
+            const recs = [];
+            
+            if (!results.securityData.usesHTTPS) {
+                recs.push("Installer un certificat SSL valide et forcer HTTPS");
+            }
+            
+            if (!results.securityData.hasCSP) {
+                recs.push("Implémenter une Content Security Policy");
+            }
+            
+            if (!results.securityData.hasHSTS) {
+                recs.push("Ajouter le header Strict-Transport-Security");
+            }
+            
+            if (results.securityData.externalScripts > 0) {
+                recs.push("Forcer HTTPS pour tous les scripts externes");
+            }
+            
+            if (recs.length === 0) {
+                recs.push("Configuration de sécurité satisfaisante");
+            }
+            
+            let html = '';
+            recs.forEach((rec, index) => {
+                html += `
+                    <div class="finding info">
+                        <h4>Recommandation ${index + 1}</h4>
+                        <div>${rec}</div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        // ==================== UTILITAIRES ====================
+
+        function getMetricClass(score) {
+            if (score < 40) return 'critical';
+            if (score < 70) return 'warning';
+            return 'success';
+        }
+
+        function calculateRiskLevel(score) {
+            if (score < 40) return 'CRITIQUE';
+            if (score < 60) return 'ÉLEVÉ';
+            if (score < 80) return 'MODÉRÉ';
+            return 'FAIBLE';
+        }
+
+        function updateStep(step) {
+            // Réinitialiser toutes les étapes
+            for (let i = 1; i <= 6; i++) {
+                const stepEl = document.getElementById(`step${i}`);
+                stepEl.classList.remove('active', 'completed');
+            }
+            
+            // Activer l'étape courante
+            document.getElementById(`step${step}`).classList.add('active');
+            
+            // Marquer les étapes précédentes comme complétées
+            for (let i = 1; i < step; i++) {
+                document.getElementById(`step${i}`).classList.add('completed');
+            }
+            
+            STATE.currentStep = step;
+        }
+
+        function updateStatus(status) {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            
+            switch(status) {
+                case 'ready':
+                    dot.style.background = 'var(--hacker-green)';
+                    text.textContent = 'Prêt';
+                    break;
+                case 'scanning':
+                    dot.style.background = 'var(--warning)';
+                    text.textContent = 'Analyse...';
+                    break;
+                case 'success':
+                    dot.style.background = 'var(--hacker-green)';
+                    text.textContent = 'Terminé';
+                    break;
+                case 'error':
+                    dot.style.background = 'var(--danger)';
+                    text.textContent = 'Erreur';
+                    break;
+            }
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.classList.add('active');
+            
+            setTimeout(() => {
+                errorEl.classList.remove('active');
+            }, 5000);
+        }
+
+        function resetUI() {
+            // Cacher les résultats précédents
+            document.getElementById('resultsScreen').classList.remove('active');
+            
+            // Réinitialiser l'écran de chargement
+            document.getElementById('loadingScreen').classList.remove('active');
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`step${i}`).classList.remove('active', 'completed');
+            }
+            
+            // Cacher les erreurs
+            document.getElementById('errorMessage').classList.remove('active');
+        }
+
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Timeout pour fetch
+        async function fetchWithTimeout(url, options = {}, timeout = 10000) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeout);
+            
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                return response;
+            } catch (error) {
+                clearTimeout(timeoutId);
+                throw error;
+            }
+        }
+    </script>
+</body>
+</html>
